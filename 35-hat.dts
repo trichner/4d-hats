@@ -63,7 +63,7 @@
                         backlight {
                                 compatible = "4dsystems,dma-pwm";
 
-                                4d,pwmbl-gpio = /bits/ 16 <22>;
+                                4d,pwmbl-gpio = /bits/ 16 <18>;
                                 4d,pwmbl-type = /bits/ 16 <2>;
                                 4d,pwmbl-brightness = /bits/ 16 <100>;
                                 4d,pwmbl-title = "35-hat-pwm";
