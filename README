@@ -17,7 +17,7 @@ INSTALLATION
     endif
     -----------------------------------
 
-    Add to drivers/video/Makefile:  obj-y += fbtft/
+    Add to drivers/video/Makefile:  obj-y += 4d-hats/
     -----------------------------------
     obj-y				  += fbdev/
     obj-y                                 += 4d-hats/
