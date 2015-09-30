@@ -1,5 +1,12 @@
 EXTRA_CFLAGS += -I$(src)
-obj-$(CONFIG_4DPI_SPI_DMA)        += spi-bcm2708_dma.o
+
+KERNEL_GE_4_1 := $(shell [ $(VERSION) -ge 4 -a $(PATCHLEVEL) -ge 1 ] && echo true)
+ifeq ($(KERNEL_GE_4_1),true)
+	obj-$(CONFIG_4DPI_SPI_DMA)        += spi-bcm2835_dma.o
+else
+	obj-$(CONFIG_4DPI_SPI_DMA)        += spi-bcm2708_dma.o
+endif
+
 obj-$(CONFIG_FB_HATS)             += 4dpi.o
 
 ifeq ($(CONFIG_LOCALVERSION),"-v7")
