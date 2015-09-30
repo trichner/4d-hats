@@ -209,10 +209,12 @@ static u8 ili9341_24_seq_enable_3g[] =         { ILI9341_ENABLE_3G,
                                               0x00, };
 static u8 ili9341_24_seq_gama_set[] =          { ILI9341_GAMMA_SET,
                                               0x01, };
+/*
 static u8 ili9341_24_seq_positive_gama[] =     { ILI9341_POSITIVE_GAMMA_CORRECTION,
                                                0x0f, 0x2D, 0x0E, 0x08, 0x12, 0x0A, 0x3D, 0x95, 0x31, 0x04, 0x10, 0x09, 0x09, 0x0D, 0x00, };
 static u8 ili9341_24_seq_negative_gama[] =     { ILI9341_NEGATIVE_GAMMA_CORRECTION,
                                                0x00, 0x12, 0x17, 0x03, 0x0d, 0x05, 0x2c, 0x44, 0x41, 0x05, 0x0F, 0x0a, 0x30, 0x32, 0x0F, };
+*/
 static u8 ili9341_24_seq_write_memory[] =      { ILI9341_WRITE_MEMORY, };
 static u8 ili9341_24_seq_sleep_out[] =         { ILI9341_SLEEP_OUT, 0x06};
 static u8 ili9341_24_seq_display_on[] =        { ILI9341_DISPLAY_ON };
@@ -1387,8 +1389,12 @@ static struct spi_driver spi_lcdpi_driver = {
     },
     .probe = lcdpi_probe,
     .remove = lcdpi_remove,
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0))
     .suspend = lcdpi_suspend,
     .resume = lcdpi_resume,
+#endif
+
 };
 
 static int __init lcdpi_init(void)
