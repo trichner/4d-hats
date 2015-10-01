@@ -3,7 +3,7 @@ INSTALLATION
 
   From linux directory:
     cd drivers/video
-    git clone https://strancar@bitbucket.org/4DPi/4d-hats.git    
+    git clone https://bitbucket.org/4DPi/4d-hats.git    
     
     Add to drivers/video/Kconfig:   source "drivers/video/4d-hats/Kconfig"
     -----------------------------------
