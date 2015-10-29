@@ -303,6 +303,9 @@ static u8 hx8357_seq_write_memory_start[] = { HX8357_WRITE_MEMORY_START };
 /* ioctl for reading tactile switches */
 #define QUERY_GET_KEYS _IOR('K', 1, unsigned char *)
 
+/* ioctl to force LCD module initialization */
+#define QUERY_INIT _IOR('I', 1, unsigned char *)
+
 /* ioctl for reading tactile product code */
 #define QUERY_GET_PRODUCT_CODE _IOR('P', 1, unsigned char *)
 
@@ -380,7 +383,11 @@ failed: kfree(bl_ops);
 
 
 static struct spi_device *lcdpi_spi_device;
-
+static struct lcdpi *lcdpi_item;
+static void ili9341_24_setup(struct lcdpi *item);
+static void ili9341_32_setup(struct lcdpi *item);
+static void hx8357_35_setup(struct lcdpi *item);
+static void lcdpi_update_all(struct lcdpi *item);
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35))
 static int ssd1289_ioctl(struct inode *i, struct file *f, unsigned int cmd, unsigned long arg)
@@ -410,6 +417,21 @@ static int lcdpi_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg
         {
             return -EACCES;
         }
+        break;
+
+    case QUERY_INIT:
+        switch(product_code) {
+        case HAT24:
+            ili9341_24_setup(lcdpi_item);
+            break;
+        case HAT32:
+            ili9341_32_setup(lcdpi_item);
+            break;
+        case HAT35:
+            hx8357_35_setup(lcdpi_item);
+            break;
+        }
+        lcdpi_update_all(lcdpi_item);
         break;
 
     default:
@@ -442,7 +464,7 @@ static int write_spi_dma(struct lcdpi *item, size_t len)
 }
 
 /*
-This routine will write a single 16-bit value, either as data or as a command 
+This routine will write a single 16-bit value, either as data or as a command
 (depends on isdata). The LCD will clock this in because the SPIs /CS goes high.
 */
 
@@ -617,7 +639,7 @@ static void lcdpi_update(struct fb_info *info, struct list_head *pagelist)
 }
 
 /* ILI9341 init for 24-HAT */
-static void __init ili9341_24_setup(struct lcdpi *item)
+static void ili9341_24_setup(struct lcdpi *item)
 {
     dev_dbg(item->dev, "%s: item=0x%p\n", __func__, (void *)item);
 
@@ -694,7 +716,7 @@ static void __init ili9341_24_setup(struct lcdpi *item)
 
 
 /* ILI9341 init for 32-HAT*/
-static void __init ili9341_32_setup(struct lcdpi *item)
+static void ili9341_32_setup(struct lcdpi *item)
 {
     lcdpi_spiblock[1]=0;
     lcdpi_spiblock[2]=0;
@@ -757,7 +779,7 @@ static void __init ili9341_32_setup(struct lcdpi *item)
 }
 
 /* HX8357 init for 35-HAT*/
-static void __init hx8357_35_setup(struct lcdpi *item)
+static void hx8357_35_setup(struct lcdpi *item)
 {
     lcdpi_spiblock[1]=0;
     lcdpi_spiblock[2]=0;
@@ -1137,6 +1159,7 @@ static int __init lcdpi_probe(struct spi_device *dev)
     dev_set_drvdata(&dev->dev, item);
     item->backlight=1;
 
+    lcdpi_item = item;
     lcdpi_spi_device=item->spidev=dev;
     spin_lock_init(&item->spi_lock);
     item->dev=&dev->dev;
@@ -1376,6 +1399,7 @@ static const struct of_device_id lcdpi_dt_ids[] = {
 { .compatible = "4dsystems,24-hat", .data = (void *)HAT24 },
 { .compatible = "4dsystems,32-hat", .data = (void *)HAT32  },
 { .compatible = "4dsystems,35-hat", .data = (void *)HAT35  },
+{ .compatible = "4dsystems,4dpi-3x", .data = (void *)0  }, /* product code is read from Xilinx */
 {},
 };
 
