@@ -27,9 +27,12 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/dmaengine.h>
 
 #include <linux/hrtimer.h>
 #include <linux/ktime.h>
+
+#include <mach/platform.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 #include <mach/dma.h>
@@ -48,6 +51,7 @@
 
 #define GPIO_LEN		0xb4
 #define DMA_LEN			(0x100 * 15) //0x24
+#define DMA_CHAN_SIZE 0x100
 //#define DMA_LEN			0x24
 #define PWM_BASE		(BCM2708_PERI_BASE + 0x20C000)
 #define PWM_LEN			0x28
@@ -167,6 +171,11 @@ static ushort gpio = 22;
 module_param(gpio, ushort, 0444);
 MODULE_PARM_DESC(gpio, "GPIO used for PWM: 0-63");
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
+static ushort dma_channel = 14;
+module_param(dma_channel, ushort, 0444);
+MODULE_PARM_DESC(dma_channel, "DMA channel for DMA based pwm (0-14)");
+#endif
 static int gpio_backlight_update_status(struct backlight_device *bl) {
     struct gpio_backlight *gbl = bl_get_data(bl);
     int brightness = bl->props.brightness;
@@ -292,19 +301,30 @@ int init_dma_pwm(struct platform_device *pdev, u8 delay_hw)
     ctl = (struct ctldata_s *)ctl_page.buf;
     ctl_dma = (struct ctldata_s *)ctl_page.dma;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0))
     /* register DMA channel */
-    ret = bcm_dma_chan_alloc(BCM_DMA_FEATURE_FAST, &dma_chan_base, &dma_irq);
+    ret = bcm_dma_chan_alloc(BCM_DMA_FEATURE_NORMAL_ORD, &dma_chan_base, &dma_irq);
     if (ret < 0) {
         printk("couldn't allocate a DMA channel\n");
-        return ret;
+        //return ret;
     }
     dma_chan = ret;
     printk("DMA channel %d at address 0x%08lx with irq %d\n",
-        dma_chan, (unsigned long)dma_chan_base, dma_irq);
-
+                          dma_chan, (unsigned long)dma_chan_base, dma_irq);
+#else
+    dma_chan = dma_channel;
+    dev_info(&pdev->dev, "Using DMA channel %d\n",
+         dma_chan);
+#endif
 
     gpio_reg = (uint32_t *)ioremap(GPIO_BASE, GPIO_LEN);
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0))
     dma_reg = (uint32_t *)dma_chan_base;
+#else
+    dma_reg  = (uint32_t *)ioremap(DMA_BASE,  DMA_LEN) + dma_chan * (DMA_CHAN_SIZE / sizeof(dma_reg));
+#endif
+
     clk_reg  = (uint32_t *)ioremap(CLK_BASE,  CLK_LEN);
     pwm_reg  = (uint32_t *)ioremap(PWM_BASE,  PWM_LEN);
     pcm_reg  = (uint32_t *)ioremap(PCM_BASE, PCM_LEN);
@@ -550,7 +570,9 @@ static int gpio_backlight_remove(struct platform_device *pdev) {
             dma_free_coherent(&pdev->dev, 4096, ctl_page.buf, ctl_page.dma);
 
         iounmap(gpio_reg);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0))
         bcm_dma_chan_free(dma_chan);
+#endif
         iounmap(clk_reg);
         iounmap(pwm_reg);
     } else {
